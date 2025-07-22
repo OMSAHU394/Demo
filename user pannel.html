@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Op Movie</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #1a1a1a;
+      color: white;
+      transition: margin-left .3s; /* Sidebar ke liye transition */
+    }
+
+    /* === Sidebar Styles === */
+    .sidebar {
+      height: 100%;
+      width: 0;
+      position: fixed;
+      z-index: 10;
+      top: 0;
+      left: 0;
+      background-color: #111;
+      overflow-x: hidden;
+      transition: 0.3s;
+      padding-top: 60px;
+    }
+
+    .sidebar a {
+      padding: 10px 15px;
+      text-decoration: none;
+      font-size: 18px;
+      color: #818181;
+      display: block;
+      transition: 0.3s;
+    }
+
+    .sidebar a:hover {
+      color: #f1f1f1;
+    }
+
+    .sidebar .closebtn {
+      position: absolute;
+      top: 0;
+      right: 25px;
+      font-size: 36px;
+      margin-left: 50px;
+    }
+
+    .social-links {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .social-links a {
+      display: inline-block;
+      margin: 0 10px;
+      font-size: 24px;
+    }
+
+    /* === Top Bar and Main Content === */
+    .top-bar {
+      background-color: #2a2a2a;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 5;
+      box-sizing: border-box;
+    }
+    
+    .menu-button {
+      font-size: 1.5em;
+      cursor: pointer;
+      color: white;
+      background: none;
+      border: none;
+    }
+
+    .app-title {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #e50914;
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    .search-input {
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: none;
+      background: #333;
+      color: white;
+    }
+
+    #main {
+      padding-top: 70px; /* Top bar ke liye jagah */
+    }
+
+    .section-title {
+      font-size: 1.3em;
+      margin: 20px;
+      color: #ffffff;
+    }
+
+    /* === Movie Card Styles === */
+    .movie-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 15px;
+      padding: 0 15px 20px 15px;
+    }
+
+    .movie-card {
+      background-color: #2a2a2a;
+      border-radius: 8px;
+      overflow: hidden;
+      padding: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .movie-card:hover {
+        transform: scale(1.05);
+    }
+
+    .movie-card img {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .movie-title {
+      margin: 15px 0 10px 0;
+      font-size: 1em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .download-button {
+      display: inline-block;
+      background-color: #e50914;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 0.9em;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .movie-poster-wrapper {
+      position: relative;
+    }
+
+    .language-badge {
+      background: gold;
+      color: black;
+      padding: 2px 6px;
+      font-size: 0.7em;
+      border-radius: 3px;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div id="mySidebar" class="sidebar">
+    <a href="javascript:void(0)" class="closebtn" onclick="toggleNav()">×</a>
+    <!-- Dynamic Menu Items will be added here by JS -->
+    <div id="custom-menu-items"></div> 
+    <div class="social-links">
+      <a href="#" id="facebook-link" target="_blank" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+      <a href="#" id="instagram-link" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+      <a href="#" id="twitter-link" target="_blank" title="Twitter"><i class="fab fa-twitter"></i></a>
+      <a href="#" id="linkedin-link" target="_blank" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+    </div>
+  </div>
+
+  <div id="main">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <button class="menu-button" onclick="toggleNav()">☰</button>
+      <div class="app-title">Op Movie</div>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search movie..." />
+    </div>
+
+    <h2 class="section-title">Latest Movies</h2>
+
+    <div class="movie-container" id="movies-list">
+      <p>Loading movies...</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, collection, getDocs, getDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    // Same Firebase config as Admin Panel
+    const firebaseConfig = {
+      apiKey: "AIzaSyDqgyJ4OdNr1stXecYCh5YIM-ss7oJEvzA",
+      authDomain: "opmovie-31612.firebaseapp.com",
+      projectId: "opmovie-31612",
+      storageBucket: "opmovie-31612.appspot.com",
+      messagingSenderId: "558866387996",
+      appId: "1:558866387996:web:f1708b014c6ca2ad727bd9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const moviesList = document.getElementById("movies-list");
+    const searchInput = document.getElementById("searchInput");
+    let allMovies = [];
+
+    // --- Sidebar and Dynamic Content Functions ---
+
+    window.toggleNav = function() {
+      const sidebar = document.getElementById("mySidebar");
+      const main = document.getElementById("main");
+      if (sidebar.style.width === "250px") {
+        sidebar.style.width = "0";
+        main.style.marginLeft = "0";
+      } else {
+        sidebar.style.width = "250px";
+        main.style.marginLeft = "250px";
+      }
+    }
+
+    async function loadSocialLinks() {
+        try {
+            const docRef = doc(db, "settings", "socialLinks");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById("facebook-link").href = data.facebook || "#";
+                document.getElementById("instagram-link").href = data.instagram || "#";
+                document.getElementById("twitter-link").href = data.twitter || "#";
+                document.getElementById("linkedin-link").href = data.linkedin || "#";
+            }
+        } catch (err) { console.error("Error loading social links:", err); }
+    }
+
+    async function loadCustomMenuItems() {
+        const menuContainer = document.getElementById("custom-menu-items");
+        menuContainer.innerHTML = "";
+        try {
+            const querySnapshot = await getDocs(collection(db, "menuItems"));
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const link = document.createElement("a");
+                link.href = data.url;
+                link.textContent = data.text;
+                link.target = "_blank";
+                menuContainer.appendChild(link);
+            });
+        } catch (err) { console.error("Error loading menu items:", err); }
+    }
+
+    // --- Movie Loading and Displaying Functions ---
+
+    async function loadMovies() {
+      moviesList.innerHTML = "<p>Loading movies...</p>";
+      const querySnapshot = await getDocs(collection(db, "movies"));
+      allMovies = [];
+      querySnapshot.forEach(doc => {
+        allMovies.push(doc.data());
+      });
+      displayMovies(allMovies);
+    }
+
+    function displayMovies(movies) {
+      if (movies.length === 0) {
+        moviesList.innerHTML = "<p>No movies found.</p>";
+        return;
+      }
+
+      moviesList.innerHTML = "";
+      movies.forEach(movie => {
+        const card = document.createElement("div");
+        card.className = "movie-card";
+        
+        // Make the whole card clickable to watch the movie
+        card.onclick = () => {
+            if (movie.movieUrl) {
+                window.open(movie.movieUrl, '_blank');
+            }
+        };
+
+        const downloadButtonHtml = movie.downloadUrl 
+          ? `<a href="${movie.downloadUrl}" class="download-button" download onclick="event.stopPropagation()">Download</a>`
+          : '';
+
+        card.innerHTML = `
+          <div class="movie-poster-wrapper">
+            <img src="${movie.posterUrl}" alt="${movie.title} Poster" onerror="this.src='https://via.placeholder.com/160x240.png?text=No+Image'">
+            <div class="language-badge">${movie.language || "N/A"}</div>
+          </div>
+          <div class="movie-title">${movie.title}</div>
+          ${downloadButtonHtml}
+        `;
+        moviesList.appendChild(card);
+      });
+    }
+
+    // Filter movies based on search
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.toLowerCase();
+      const filtered = allMovies.filter(m => m.title.toLowerCase().includes(query));
+      displayMovies(filtered);
+    });
+
+    // --- Initial Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMovies();
+        loadSocialLinks();
+        loadCustomMenuItems();
+    });
+  </script>
+</body>
+</html>
